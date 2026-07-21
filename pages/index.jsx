@@ -187,7 +187,7 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: '40px auto', fontFamily: 'sans-serif' }}>
+    <main style={{ maxWidth: 720, margin: '40px auto' }}>
       <h1>Seedance Ad Creative Generator</h1>
 
       <section style={{ marginBottom: 32 }}>

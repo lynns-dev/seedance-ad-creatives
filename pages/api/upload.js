@@ -1,19 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const formidable = require('formidable');
+const { formidable } = require('formidable');
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_SIZE_BYTES = 10 * 1024 * 1024;
 
-module.exports.config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -50,4 +44,10 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({ url });
   });
+}
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
 };
