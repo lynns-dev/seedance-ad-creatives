@@ -34,10 +34,13 @@ creatives from them via the [Seedance](https://api.seedance2.ai) API.
    Library search term, and a shortlist of likely product photos. Only
    `http(s)` URLs to public hosts are allowed (local/private addresses are
    rejected). Fills in the fields below for you to review/edit.
-2. **Reference image** (`pages/api/upload.js`) — either click one of the
-   image candidates pulled from your site (already a public URL, no upload
-   needed), or upload your own image, saved to `public/uploads` and
-   returned as a public URL for Seedance's `image_urls` input.
+2. **Reference image** (`pages/api/upload.js`, served back via
+   `pages/api/uploads/[filename].js`) — either click one of the image
+   candidates pulled from your site (already a public URL, no upload
+   needed), or upload your own image. Uploads are written to `os.tmpdir()`
+   (not `public/`, which is part of the read-only deployment bundle on
+   serverless hosts) and served through the `/api/uploads/:filename` route,
+   giving Seedance a public URL for its `image_urls` input.
 3. **Scan top ads** (`lib/metaAdLibrary.js`) — searches Meta's public Ad
    Library for currently-running video ads matching your search terms
    (brand/category/competitor), ranked by days running as a proxy for
@@ -64,9 +67,11 @@ the whole flow.
 - The in-memory task store in `lib/taskStore.js` does not persist across
   serverless function instances. For production use, back it with a real
   datastore (KV, Postgres, etc.) keyed by `taskId`.
-- Uploaded images are stored on local disk (`public/uploads`), which does
-  not persist on ephemeral/serverless hosts (e.g. Vercel). For production,
-  swap `pages/api/upload.js` for real object storage (Vercel Blob, S3, etc.)
-  and return that URL instead.
+- Uploaded images are stored in `os.tmpdir()`, which does not persist
+  across serverless function instances/cold starts (e.g. Vercel) - an image
+  uploaded in one request may 404 if a later request lands on a different
+  instance. For production, swap `pages/api/upload.js`/`pages/api/uploads/[filename].js`
+  for real object storage (Vercel Blob, S3, etc.) and return that URL
+  instead.
 - Rotate any API key that has been shared outside of environment variables
   or a secrets manager.
