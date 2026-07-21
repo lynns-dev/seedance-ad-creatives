@@ -89,6 +89,10 @@ function ScriptCard({ script, imageUrl }) {
 }
 
 export default function Home() {
+  const [siteUrl, setSiteUrl] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [siteImages, setSiteImages] = useState([]);
+
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageUrl, setImageUrl] = useState(null);
@@ -101,6 +105,35 @@ export default function Home() {
   const [scripts, setScripts] = useState([]);
   const [referenceAds, setReferenceAds] = useState([]);
   const [scanWarning, setScanWarning] = useState(null);
+
+  async function analyzeSite(e) {
+    e.preventDefault();
+    setAnalyzing(true);
+    setError(null);
+    setSiteImages([]);
+    try {
+      const res = await fetch('/api/analyze-site', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: siteUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      setProductDescription(data.productDescription);
+      setSearchTerms(data.suggestedSearchTerms);
+      setSiteImages(data.images || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  function pickSiteImage(url) {
+    setImagePreview(url);
+    setImageUrl(url);
+    setImageFile(null);
+  }
 
   function handleImageChange(e) {
     const file = e.target.files?.[0];
@@ -158,23 +191,73 @@ export default function Home() {
       <h1>Seedance Ad Creative Generator</h1>
 
       <section style={{ marginBottom: 32 }}>
-        <h2>1. Product reference image</h2>
-        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} />
-        {imagePreview && (
-          <div style={{ marginTop: 8 }}>
-            <img src={imagePreview} alt="preview" style={{ maxWidth: 200, borderRadius: 8 }} />
-            <div>
-              <button onClick={uploadImage} disabled={uploading || !!imageUrl}>
-                {uploading ? 'Uploading...' : imageUrl ? 'Uploaded' : 'Upload'}
-              </button>
-              {imageUrl && <span style={{ marginLeft: 8, fontSize: 12, color: 'green' }}>{imageUrl}</span>}
+        <h2>1. Analyze your website (optional)</h2>
+        <form onSubmit={analyzeSite}>
+          <input
+            type="url"
+            value={siteUrl}
+            onChange={(e) => setSiteUrl(e.target.value)}
+            placeholder="https://yourbrand.com/product"
+            style={{ width: '100%' }}
+            required
+          />
+          <button type="submit" disabled={analyzing} style={{ marginTop: 8 }}>
+            {analyzing ? 'Analyzing...' : 'Analyze site'}
+          </button>
+          <p style={{ fontSize: 12, color: '#888' }}>
+            Pulls a product description, suggested Ad Library search term, and candidate product photos
+            from the page. Fills in the fields below — review and edit before continuing.
+          </p>
+        </form>
+
+        {siteImages.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <p style={{ fontSize: 12, color: '#888' }}>Pick a reference image from the site:</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {siteImages.map((url) => (
+                <img
+                  key={url}
+                  src={url}
+                  alt=""
+                  onClick={() => pickSiteImage(url)}
+                  style={{
+                    width: 90,
+                    height: 90,
+                    objectFit: 'cover',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    border: imageUrl === url ? '3px solid #06f' : '1px solid #ddd',
+                  }}
+                />
+              ))}
             </div>
           </div>
         )}
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2>2. Scan top ads &amp; generate diverse scripts</h2>
+        <h2>2. Product reference image</h2>
+        <p style={{ fontSize: 12, color: '#888' }}>
+          Pick an image from the site above, or upload your own.
+        </p>
+        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleImageChange} />
+        {imagePreview && (
+          <div style={{ marginTop: 8 }}>
+            <img src={imagePreview} alt="preview" style={{ maxWidth: 200, borderRadius: 8 }} />
+            {imageFile && (
+              <div>
+                <button onClick={uploadImage} disabled={uploading || !!imageUrl}>
+                  {uploading ? 'Uploading...' : imageUrl ? 'Uploaded' : 'Upload'}
+                </button>
+              </div>
+            )}
+            {imageUrl && <div style={{ fontSize: 12, color: 'green' }}>{imageUrl}</div>}
+          </div>
+        )}
+      </section>
+
+      <section style={{ marginBottom: 32 }}>
+        <h2>3. Scan top ads &amp; generate diverse scripts</h2>
         <form onSubmit={generateScripts}>
           <label style={{ display: 'block', marginBottom: 8 }}>
             Product description
@@ -227,7 +310,7 @@ export default function Home() {
 
       {scripts.length > 0 && (
         <section>
-          <h2>3. Generated scripts ({scripts.length} distinct ad types)</h2>
+          <h2>4. Generated scripts ({scripts.length} distinct ad types)</h2>
           {scripts.map((script, i) => (
             <ScriptCard key={i} script={script} imageUrl={imageUrl} />
           ))}

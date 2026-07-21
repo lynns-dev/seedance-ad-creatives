@@ -27,29 +27,37 @@ creatives from them via the [Seedance](https://api.seedance2.ai) API.
 
 ## How it works
 
-1. **Upload a reference image** (`pages/api/upload.js`) — saved to
-   `public/uploads` and returned as a public URL for Seedance's
-   `image_urls` input.
-2. **Scan top ads** (`lib/metaAdLibrary.js`) — searches Meta's public Ad
+1. **Analyze your website** (`lib/websiteAnalyzer.js`, `pages/api/analyze-site.js`,
+   optional) — fetches a URL you give it, extracts page text and candidate
+   image URLs (`og:image` + `<img>` tags, filtered to drop obvious logos/icons),
+   and asks Claude to synthesize a product description, a suggested Ad
+   Library search term, and a shortlist of likely product photos. Only
+   `http(s)` URLs to public hosts are allowed (local/private addresses are
+   rejected). Fills in the fields below for you to review/edit.
+2. **Reference image** (`pages/api/upload.js`) — either click one of the
+   image candidates pulled from your site (already a public URL, no upload
+   needed), or upload your own image, saved to `public/uploads` and
+   returned as a public URL for Seedance's `image_urls` input.
+3. **Scan top ads** (`lib/metaAdLibrary.js`) — searches Meta's public Ad
    Library for currently-running video ads matching your search terms
    (brand/category/competitor), ranked by days running as a proxy for
    performance (the Ad Library API doesn't expose impressions/spend for most
    commercial ads — advertisers keep winning ads live longer and kill losers
    fast, so longevity is the best available public signal).
-3. **Generate diverse scripts** (`lib/scriptGenerator.js`) — calls Claude
+4. **Generate diverse scripts** (`lib/scriptGenerator.js`) — calls Claude
    with a fixed list of ad archetypes (UGC testimonial, problem-solution,
    unboxing/demo, POV, founder story, comparison, humor/skit, social proof
    montage, tutorial, ASMR close-up) and assigns one per script, so the
    output is guaranteed to span genuinely different ad types rather than
    variations on one idea. Each script includes a `videoPrompt` written for
    direct use with an image/text-to-video model.
-4. **Generate video** (`lib/seedance.js`, `pages/api/seedance/generate.js`)
-   — sends each script's `videoPrompt` + the uploaded reference image to
-   Seedance as an `image-to-video` task, and polls/receives a webhook for
-   the result.
+5. **Generate video** (`lib/seedance.js`, `pages/api/seedance/generate.js`)
+   — sends each script's `videoPrompt` + the reference image to Seedance as
+   an `image-to-video` task, and polls/receives a webhook for the result.
 
-Orchestration entrypoint: `pages/api/scripts/generate.js` ties steps 2+3
-together; `pages/index.jsx` is the UI for the whole flow.
+Orchestration entrypoints: `pages/api/analyze-site.js` (step 1),
+`pages/api/scripts/generate.js` (steps 3+4); `pages/index.jsx` is the UI for
+the whole flow.
 
 ## Notes
 
